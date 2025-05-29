@@ -330,6 +330,54 @@ function App() {
                 </div>
               </div>
 
+              {/* Interactive Map */}
+              {routeData.route_geometry && routeData.route_geometry.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    🗺️ Route Map
+                  </h3>
+                  <div className="h-80 rounded-lg overflow-hidden">
+                    <MapContainer
+                      center={[routeData.points[0]?.lat || 0, routeData.points[0]?.lng || 0]}
+                      zoom={10}
+                      style={{ height: '100%', width: '100%' }}
+                    >
+                      <TileLayer
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      />
+                      
+                      {/* Route polyline */}
+                      <Polyline 
+                        positions={routeData.route_geometry} 
+                        color="#3b82f6" 
+                        weight={4}
+                        opacity={0.8}
+                      />
+                      
+                      {/* Markers for each point */}
+                      {routeData.points.map((point, index) => (
+                        <Marker key={index} position={[point.lat, point.lng]}>
+                          <Popup>
+                            <div className="text-sm">
+                              <div className="font-semibold">
+                                {point.point_type === 'start' ? '🏁 Start' : 
+                                 point.point_type === 'destination' ? '🏁 Destination' : 
+                                 `📍 Checkpoint ${index}`}
+                              </div>
+                              <div className="text-gray-600">{point.address}</div>
+                              <div className="text-blue-600">{formatTime(point.estimated_time)}</div>
+                              <div className="text-green-600">{formatDistanceFromSource(point.distance_from_source)} from start</div>
+                              <div>{Math.round(point.weather.temperature)}°C - {point.weather.condition}</div>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  </div>
+                </div>
+              )}
+
               {/* Timeline */}
               <div className="space-y-4">
                 {routeData.points.map((point, index) => (
