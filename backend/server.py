@@ -168,30 +168,92 @@ async def get_route(source_coords, dest_coords, transport_mode, api_key):
             "instructions": route["guidance"]["instructions"] if "guidance" in route else []
         }
 
-def generate_timeline_points(route_data, start_time_str, transport_mode):
+async def generate_timeline_points(route_data, start_time_str, transport_mode, api_key):
     """Generate points along the route with estimated arrival times"""
     start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
     total_duration = route_data["total_duration"]
+    route_points = route_data["route_points"]
+    source_coords = route_data["source_coords"]
+    dest_coords = route_data["dest_coords"]
     
-    # Create timeline points (every 30 minutes or major waypoints)
-    points = []
-    num_points = min(10, max(3, total_duration // 1800))  # Every 30 min, max 10 points
+    # Always include start and end points
+    timeline_points = []
     
-    for i in range(num_points):
-        progress = i / (num_points - 1) if num_points > 1 else 0
-        time_offset = int(total_duration * progress)
-        estimated_time = start_time + timedelta(seconds=time_offset)
+    # Add starting point
+    timeline_points.append({
+        "lat": source_coords["lat"],
+        "lng": source_coords["lng"],
+        "address": source_coords["address"],
+        "estimated_time": start_time.isoformat(),
+        "point_type": "start"
+    })
+    
+    # For longer routes, add intermediate checkpoints
+    if len(route_points) > 2 and total_duration > 1800:  # More than 30 minutes
+        # Calculate how many intermediate points to show (max 8 between start and end)
+        num_intermediate = min(8, max(2, total_duration // 3600))  # Roughly every hour
         
-        # For now, interpolate coordinates (in real implementation, use actual route points)
-        # This is a simplified approach - in production you'd use actual route geometry
-        points.append({
-            "lat": 40.7128 + (progress * 0.5),  # Placeholder coordinates
-            "lng": -74.0060 + (progress * 0.5),  # Placeholder coordinates
-            "address": f"Point {i+1} along route",
-            "estimated_time": estimated_time.isoformat()
-        })
+        for i in range(1, num_intermediate + 1):
+            progress = i / (num_intermediate + 1)
+            point_index = int(progress * (len(route_points) - 1))
+            
+            if point_index < len(route_points):
+                lat, lng = route_points[point_index]
+                time_offset = int(total_duration * progress)
+                estimated_time = start_time + timedelta(seconds=time_offset)
+                
+                # Get address for this point
+                address = await reverse_geocode(lat, lng, api_key)
+                
+                timeline_points.append({
+                    "lat": lat,
+                    "lng": lng,
+                    "address": address,
+                    "estimated_time": estimated_time.isoformat(),
+                    "point_type": "checkpoint"
+                })
     
-    return points
+    # Add ending point
+    timeline_points.append({
+        "lat": dest_coords["lat"],
+        "lng": dest_coords["lng"],
+        "address": dest_coords["address"],
+        "estimated_time": (start_time + timedelta(seconds=total_duration)).isoformat(),
+        "point_type": "destination"
+    })
+    
+    return timeline_points
+
+async def reverse_geocode(lat, lng, api_key):
+    """Get address for coordinates using TomTom Reverse Geocoding"""
+    try:
+        async with httpx.AsyncClient() as client:
+            url = f"https://api.tomtom.com/search/2/reverseGeocode/{lat},{lng}.json"
+            params = {"key": api_key, "returnSpeedLimit": "false", "radius": 100}
+            
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data["addresses"]:
+                address_data = data["addresses"][0]["address"]
+                # Build a nice address string
+                parts = []
+                if "streetName" in address_data and address_data["streetName"]:
+                    parts.append(address_data["streetName"])
+                if "municipality" in address_data and address_data["municipality"]:
+                    parts.append(address_data["municipality"])
+                elif "localName" in address_data and address_data["localName"]:
+                    parts.append(address_data["localName"])
+                if "countrySubdivision" in address_data and address_data["countrySubdivision"]:
+                    parts.append(address_data["countrySubdivision"])
+                    
+                return ", ".join(parts) if parts else f"Location at {lat:.4f}, {lng:.4f}"
+            else:
+                return f"Location at {lat:.4f}, {lng:.4f}"
+                
+    except Exception as e:
+        return f"Location at {lat:.4f}, {lng:.4f}"
 
 async def get_weather_forecast(lat, lng, target_time_str, api_key):
     """Get weather forecast for specific location and time"""
