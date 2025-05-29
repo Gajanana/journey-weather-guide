@@ -172,6 +172,7 @@ async def generate_timeline_points(route_data, start_time_str, transport_mode, a
     """Generate points along the route with estimated arrival times"""
     start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
     total_duration = route_data["total_duration"]
+    total_distance = route_data["total_distance"]
     route_points = route_data["route_points"]
     source_coords = route_data["source_coords"]
     dest_coords = route_data["dest_coords"]
@@ -185,7 +186,9 @@ async def generate_timeline_points(route_data, start_time_str, transport_mode, a
         "lng": source_coords["lng"],
         "address": source_coords["address"],
         "estimated_time": start_time.isoformat(),
-        "point_type": "start"
+        "point_type": "start",
+        "distance_from_source": 0,
+        "distance_to_destination": total_distance
     })
     
     # For longer routes, add intermediate checkpoints
@@ -200,17 +203,24 @@ async def generate_timeline_points(route_data, start_time_str, transport_mode, a
             if point_index < len(route_points):
                 lat, lng = route_points[point_index]
                 time_offset = int(total_duration * progress)
+                distance_from_source = int(total_distance * progress)
                 estimated_time = start_time + timedelta(seconds=time_offset)
                 
                 # Get address for this point
                 address = await reverse_geocode(lat, lng, api_key)
+                
+                # Get traffic/road conditions for this point
+                road_conditions = await get_road_conditions(lat, lng, api_key)
                 
                 timeline_points.append({
                     "lat": lat,
                     "lng": lng,
                     "address": address,
                     "estimated_time": estimated_time.isoformat(),
-                    "point_type": "checkpoint"
+                    "point_type": "checkpoint",
+                    "distance_from_source": distance_from_source,
+                    "distance_to_destination": total_distance - distance_from_source,
+                    "road_conditions": road_conditions
                 })
     
     # Add ending point
@@ -219,10 +229,66 @@ async def generate_timeline_points(route_data, start_time_str, transport_mode, a
         "lng": dest_coords["lng"],
         "address": dest_coords["address"],
         "estimated_time": (start_time + timedelta(seconds=total_duration)).isoformat(),
-        "point_type": "destination"
+        "point_type": "destination",
+        "distance_from_source": total_distance,
+        "distance_to_destination": 0
     })
     
     return timeline_points
+
+async def get_road_conditions(lat, lng, api_key):
+    """Get traffic and road conditions for a location"""
+    try:
+        async with httpx.AsyncClient() as client:
+            # Get traffic flow data
+            url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
+            params = {
+                "key": api_key,
+                "point": f"{lat},{lng}",
+                "unit": "KMPH"
+            }
+            
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            flow_data = data.get("flowSegmentData", {})
+            
+            # Calculate congestion level
+            current_speed = flow_data.get("currentSpeed", 0)
+            free_flow_speed = flow_data.get("freeFlowSpeed", current_speed)
+            
+            if free_flow_speed > 0:
+                speed_ratio = current_speed / free_flow_speed
+                if speed_ratio >= 0.8:
+                    condition = "Good"
+                    color = "green"
+                elif speed_ratio >= 0.5:
+                    condition = "Moderate"
+                    color = "yellow"
+                else:
+                    condition = "Congested"
+                    color = "red"
+            else:
+                condition = "Unknown"
+                color = "gray"
+            
+            return {
+                "condition": condition,
+                "current_speed": current_speed,
+                "free_flow_speed": free_flow_speed,
+                "confidence": flow_data.get("confidence", 0),
+                "color": color
+            }
+            
+    except Exception as e:
+        return {
+            "condition": "Unknown",
+            "current_speed": 0,
+            "free_flow_speed": 0,
+            "confidence": 0,
+            "color": "gray"
+        }
 
 async def reverse_geocode(lat, lng, api_key):
     """Get address for coordinates using TomTom Reverse Geocoding"""
