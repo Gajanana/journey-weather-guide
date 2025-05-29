@@ -302,8 +302,8 @@ function App() {
                       {/* Timeline indicator */}
                       <div className="flex flex-col items-center">
                         <div className={`w-4 h-4 rounded-full ${
-                          index === 0 ? 'bg-green-500' : 
-                          index === routeData.points.length - 1 ? 'bg-red-500' : 
+                          point.point_type === 'start' ? 'bg-green-500' : 
+                          point.point_type === 'destination' ? 'bg-red-500' : 
                           'bg-blue-500'
                         }`}></div>
                         {index < routeData.points.length - 1 && (
