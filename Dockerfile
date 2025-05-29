@@ -6,6 +6,7 @@ WORKDIR /app
 COPY frontend/ /app/
 RUN rm /app/.env
 RUN touch /app/.env
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN echo "${FRONTEND_ENV}" | tr ',' '\n' > /app/.env
 RUN cat /app/.env
 RUN yarn install --frozen-lockfile && yarn build
