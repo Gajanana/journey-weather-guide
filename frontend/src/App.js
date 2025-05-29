@@ -97,6 +97,31 @@ function App() {
     });
   };
 
+  const formatDistanceFromSource = (meters) => {
+    if (meters < 1000) {
+      return `${meters} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  const getRoadConditionColor = (condition) => {
+    switch (condition?.color) {
+      case 'green': return 'text-green-600 bg-green-100';
+      case 'yellow': return 'text-yellow-600 bg-yellow-100';
+      case 'red': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getRoadConditionIcon = (condition) => {
+    switch (condition?.condition) {
+      case 'Good': return '🟢';
+      case 'Moderate': return '🟡';
+      case 'Congested': return '🔴';
+      default: return '⚪';
+    }
+  };
+
   const getCurrentDateTime = () => {
     const now = new Date();
     const year = now.getFullYear();
