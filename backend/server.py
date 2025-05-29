@@ -129,7 +129,10 @@ async def get_route(source_coords, dest_coords, transport_mode, api_key):
             "key": api_key,
             "travelMode": tomtom_mode,
             "instructionsType": "coded",
-            "computeBestOrder": "false"
+            "computeBestOrder": "false",
+            "routeRepresentation": "polyline",
+            "computeTravelTimeFor": "all",
+            "sectionType": "traffic"
         }
         
         response = await client.get(url, params=params)
@@ -138,10 +141,30 @@ async def get_route(source_coords, dest_coords, transport_mode, api_key):
         data = response.json()
         route = data["routes"][0]
         
+        # Extract route geometry points
+        route_points = []
+        if "legs" in route and len(route["legs"]) > 0:
+            leg = route["legs"][0]
+            if "points" in leg:
+                route_points = [(point["latitude"], point["longitude"]) for point in leg["points"]]
+            else:
+                # Fallback: use start and end points
+                route_points = [
+                    (source_coords['lat'], source_coords['lng']),
+                    (dest_coords['lat'], dest_coords['lng'])
+                ]
+        else:
+            route_points = [
+                (source_coords['lat'], source_coords['lng']),
+                (dest_coords['lat'], dest_coords['lng'])
+            ]
+        
         return {
             "total_duration": route["summary"]["travelTimeInSeconds"],
             "total_distance": route["summary"]["lengthInMeters"],
-            "points": route["legs"][0]["points"] if "points" in route["legs"][0] else [],
+            "route_points": route_points,
+            "source_coords": source_coords,
+            "dest_coords": dest_coords,
             "instructions": route["guidance"]["instructions"] if "guidance" in route else []
         }
 
