@@ -316,13 +316,16 @@ function App() {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                           <div className="mb-4 md:mb-0">
                             <h3 className="text-lg font-semibold text-gray-800">
-                              {index === 0 ? '🏁 Start' : 
-                               index === routeData.points.length - 1 ? '🏁 Destination' : 
+                              {point.point_type === 'start' ? '🏁 Start' : 
+                               point.point_type === 'destination' ? '🏁 Destination' : 
                                `📍 Checkpoint ${index}`}
                             </h3>
                             <p className="text-gray-600">{point.address}</p>
                             <p className="text-sm text-blue-600 font-medium">
-                              Estimated arrival: {formatTime(point.estimated_time)}
+                              {point.point_type === 'start' ? 'Departure time' : 'Estimated arrival'}: {formatTime(point.estimated_time)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              📍 {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
                             </p>
                           </div>
 
