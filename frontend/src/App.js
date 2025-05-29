@@ -239,7 +239,11 @@ function App() {
               <button
                 type="submit"
                 disabled={loading || !formData.tomtomApiKey || !formData.weatherApiKey}
-                className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all transform ${
+                  loading || !formData.tomtomApiKey || !formData.weatherApiKey
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-blue-600 to-green-600 text-white hover:from-blue-700 hover:to-green-700 hover:scale-105'
+                }`}
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
