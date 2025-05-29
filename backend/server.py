@@ -33,12 +33,17 @@ class LocationPoint(BaseModel):
     address: str
     estimated_time: str
     weather: dict
+    distance_from_source: Optional[int] = 0
+    distance_to_destination: Optional[int] = 0
+    point_type: Optional[str] = "checkpoint"
+    road_conditions: Optional[dict] = None
 
 class RouteResponse(BaseModel):
     points: List[LocationPoint]
     total_duration: int  # seconds
     total_distance: int  # meters
     transport_mode: str
+    route_geometry: Optional[List[List[float]]] = None  # [[lat, lng], [lat, lng], ...]
 
 # TomTom transport mode mapping
 TOMTOM_TRANSPORT_MODES = {
