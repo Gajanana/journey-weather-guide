@@ -66,8 +66,8 @@ async def calculate_route(request: RouteRequest):
         )
         
         # Step 3: Generate timeline points along the route
-        timeline_points = generate_timeline_points(
-            route_data, request.start_time, request.transport_mode
+        timeline_points = await generate_timeline_points(
+            route_data, request.start_time, request.transport_mode, request.tomtom_api_key
         )
         
         # Step 4: Get weather for each point
