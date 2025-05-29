@@ -408,9 +408,25 @@ function App() {
                             <p className="text-sm text-blue-600 font-medium">
                               {point.point_type === 'start' ? 'Departure time' : 'Estimated arrival'}: {formatTime(point.estimated_time)}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              📍 {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
-                            </p>
+                            <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                              <div>📍 {point.lat.toFixed(4)}, {point.lng.toFixed(4)}</div>
+                              <div className="text-green-600 font-medium">
+                                📏 {formatDistanceFromSource(point.distance_from_source)} from start
+                              </div>
+                            </div>
+                            
+                            {/* Road Conditions */}
+                            {point.road_conditions && point.road_conditions.condition !== 'Unknown' && (
+                              <div className="mt-2">
+                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoadConditionColor(point.road_conditions)}`}>
+                                  {getRoadConditionIcon(point.road_conditions)} 
+                                  <span className="ml-1">Traffic: {point.road_conditions.condition}</span>
+                                  {point.road_conditions.current_speed > 0 && (
+                                    <span className="ml-2">({Math.round(point.road_conditions.current_speed)} km/h)</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Weather */}
