@@ -90,7 +90,8 @@ async def calculate_route(request: RouteRequest):
             points=points_with_weather,
             total_duration=route_data["total_duration"],
             total_distance=route_data["total_distance"],
-            transport_mode=request.transport_mode
+            transport_mode=request.transport_mode,
+            route_geometry=route_data["route_points"]  # Add route geometry for map
         )
         
     except Exception as e:
